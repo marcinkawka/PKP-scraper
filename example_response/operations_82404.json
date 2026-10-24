@@ -1,0 +1,867 @@
+{
+    "generatedAt": "2026-10-19T10:04:05.1328738Z",
+    "pagination": {
+        "page": 1,
+        "pageSize": 10000,
+        "totalCount": 49,
+        "totalPages": 1
+    },
+    "trains": [
+        {
+            "scheduleId": 2026,
+            "orderId": 472826001,
+            "trainOrderId": 554885819,
+            "operatingDate": "2026-10-19",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-19T10:35:00",
+                    "actualDeparture": "2026-10-19T10:56:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 290614557,
+            "trainOrderId": 325445884,
+            "operatingDate": "2026-10-19",
+            "trainStatus": "S",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 51,
+                    "actualSequenceNumber": 51,
+                    "actualArrival": "2026-10-19T12:39:00",
+                    "actualDeparture": "2026-10-19T12:58:00"
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 665128879,
+            "trainOrderId": 159109599,
+            "operatingDate": "2026-10-19",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 51,
+                    "actualSequenceNumber": 51,
+                    "actualArrival": "2026-10-19T08:32:30",
+                    "actualDeparture": "2026-10-19T08:59:30",
+                    "isConfirmed": true
+                },
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 51,
+                    "actualSequenceNumber": 52,
+                    "actualArrival": "2026-10-19T08:32:30",
+                    "actualDeparture": "2026-10-19T08:59:30",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 115163166,
+            "trainOrderId": 311402764,
+            "operatingDate": "2026-10-19",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-19T05:19:00",
+                    "actualDeparture": "2026-10-19T05:25:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 950428432,
+            "trainOrderId": 467701821,
+            "operatingDate": "2026-10-19",
+            "trainStatus": "S",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 18,
+                    "actualSequenceNumber": 18,
+                    "actualArrival": "2026-10-19T14:40:00"
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 622548300,
+            "trainOrderId": 232456955,
+            "operatingDate": "2026-10-19",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 59,
+                    "actualSequenceNumber": 59,
+                    "actualArrival": "2026-10-19T11:29:30",
+                    "actualDeparture": "2026-10-19T11:35:30",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 786519804,
+            "trainOrderId": 992321245,
+            "operatingDate": "2026-10-19",
+            "trainStatus": "S",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-19T14:36:00",
+                    "actualDeparture": "2026-10-19T14:43:00"
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 539393372,
+            "trainOrderId": 253962579,
+            "operatingDate": "2026-10-19",
+            "trainStatus": "S",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 156,
+                    "actualSequenceNumber": 156,
+                    "actualArrival": "2026-10-19T16:57:30",
+                    "actualDeparture": "2026-10-19T17:16:30"
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 985736520,
+            "trainOrderId": 967555600,
+            "operatingDate": "2026-10-19",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 59,
+                    "actualSequenceNumber": 59,
+                    "actualArrival": "2026-10-19T09:49:00",
+                    "actualDeparture": "2026-10-19T09:53:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 333068327,
+            "trainOrderId": 179511741,
+            "operatingDate": "2026-10-19",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 46,
+                    "actualSequenceNumber": 46,
+                    "actualArrival": "2026-10-19T07:50:00",
+                    "actualDeparture": "2026-10-19T07:54:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 739227010,
+            "trainOrderId": 313037287,
+            "operatingDate": "2026-10-19",
+            "trainStatus": "S",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-19T13:29:00",
+                    "actualDeparture": "2026-10-19T13:36:00"
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 859161878,
+            "trainOrderId": 194271636,
+            "operatingDate": "2026-10-19",
+            "trainStatus": "S",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 46,
+                    "actualSequenceNumber": 46,
+                    "actualArrival": "2026-10-19T16:37:30",
+                    "actualDeparture": "2026-10-19T16:44:30"
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 996879704,
+            "trainOrderId": 957956236,
+            "operatingDate": "2026-10-19",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 1,
+                    "actualSequenceNumber": 1,
+                    "actualDeparture": "2026-10-19T06:20:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 327041522,
+            "trainOrderId": 366268547,
+            "operatingDate": "2026-10-19",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-19T09:28:00",
+                    "actualDeparture": "2026-10-19T09:33:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 560164000,
+            "trainOrderId": 921620918,
+            "operatingDate": "2026-10-19",
+            "trainStatus": "S",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 1,
+                    "actualSequenceNumber": 1,
+                    "actualDeparture": "2026-10-19T14:55:00"
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 190514597,
+            "trainOrderId": 394464555,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 59,
+                    "actualSequenceNumber": 60,
+                    "actualArrival": "2026-10-18T21:03:30",
+                    "actualDeparture": "2026-10-18T21:09:30",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 665128879,
+            "trainOrderId": 159109599,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 51,
+                    "actualSequenceNumber": 51,
+                    "actualArrival": "2026-10-18T08:02:30",
+                    "actualDeparture": "2026-10-18T08:21:30",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 115163166,
+            "trainOrderId": 311402764,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-18T05:18:00",
+                    "actualDeparture": "2026-10-18T05:25:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 597203161,
+            "trainOrderId": 164048694,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-18T20:11:00",
+                    "actualDeparture": "2026-10-18T20:31:00",
+                    "isConfirmed": true
+                },
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 5,
+                    "actualArrival": "2026-10-18T20:11:00",
+                    "actualDeparture": "2026-10-18T20:31:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 622548300,
+            "trainOrderId": 232456955,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 59,
+                    "actualSequenceNumber": 59,
+                    "actualArrival": "2026-10-18T11:16:30",
+                    "actualDeparture": "2026-10-18T11:22:30",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 786519804,
+            "trainOrderId": 992321245,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-18T14:36:00",
+                    "actualDeparture": "2026-10-18T14:43:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 849035921,
+            "trainOrderId": 253962579,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 156,
+                    "actualSequenceNumber": 157,
+                    "actualArrival": "2026-10-18T16:58:30",
+                    "actualDeparture": "2026-10-18T17:19:30",
+                    "isConfirmed": true
+                },
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 156,
+                    "actualSequenceNumber": 158,
+                    "actualArrival": "2026-10-18T16:58:30",
+                    "actualDeparture": "2026-10-18T17:19:30",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 302588615,
+            "trainOrderId": 664334642,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 51,
+                    "actualSequenceNumber": 51,
+                    "actualArrival": "2026-10-18T12:42:00",
+                    "actualDeparture": "2026-10-18T13:02:00",
+                    "isConfirmed": true
+                },
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 51,
+                    "actualSequenceNumber": 52,
+                    "actualArrival": "2026-10-18T12:42:00",
+                    "actualDeparture": "2026-10-18T13:02:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 727451916,
+            "trainOrderId": 981792458,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-18T15:46:00",
+                    "actualDeparture": "2026-10-18T16:05:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 377554226,
+            "trainOrderId": 554885819,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-18T10:35:00",
+                    "actualDeparture": "2026-10-18T10:55:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 985736520,
+            "trainOrderId": 967555600,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 59,
+                    "actualSequenceNumber": 59,
+                    "actualArrival": "2026-10-18T09:22:00",
+                    "actualDeparture": "2026-10-18T09:32:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 333068327,
+            "trainOrderId": 179511741,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 46,
+                    "actualSequenceNumber": 46,
+                    "actualArrival": "2026-10-18T07:32:00",
+                    "actualDeparture": "2026-10-18T07:35:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 859161878,
+            "trainOrderId": 194271636,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 46,
+                    "actualSequenceNumber": 46,
+                    "actualArrival": "2026-10-18T16:39:30",
+                    "actualDeparture": "2026-10-18T16:44:30",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 709191591,
+            "trainOrderId": 218713212,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 46,
+                    "actualSequenceNumber": 46,
+                    "actualArrival": "2026-10-18T18:53:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 327041522,
+            "trainOrderId": 366268547,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-18T09:23:00",
+                    "actualDeparture": "2026-10-18T09:30:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 739227010,
+            "trainOrderId": 313037287,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-18T13:30:00",
+                    "actualDeparture": "2026-10-18T13:36:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 319531090,
+            "trainOrderId": 737955467,
+            "operatingDate": "2026-10-18",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-18T17:48:00",
+                    "actualDeparture": "2026-10-18T17:55:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 472826001,
+            "trainOrderId": 554885819,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-17T10:36:00",
+                    "actualDeparture": "2026-10-17T10:55:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 190514597,
+            "trainOrderId": 394464555,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 59,
+                    "actualSequenceNumber": 59,
+                    "actualArrival": "2026-10-17T21:04:30",
+                    "actualDeparture": "2026-10-17T21:11:30",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 665128879,
+            "trainOrderId": 159109599,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 51,
+                    "actualSequenceNumber": 51,
+                    "actualArrival": "2026-10-17T08:05:30",
+                    "actualDeparture": "2026-10-17T08:24:30",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 191921223,
+            "trainOrderId": 524630688,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-17T05:18:00",
+                    "actualDeparture": "2026-10-17T05:25:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 279522072,
+            "trainOrderId": 253962579,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 156,
+                    "actualSequenceNumber": 155,
+                    "actualArrival": "2026-10-17T16:59:10",
+                    "actualDeparture": "2026-10-17T17:18:10",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 597203161,
+            "trainOrderId": 164048694,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-17T20:10:00",
+                    "actualDeparture": "2026-10-17T20:29:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 349622618,
+            "trainOrderId": 664334642,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 51,
+                    "actualSequenceNumber": 51,
+                    "actualArrival": "2026-10-17T12:43:00",
+                    "actualDeparture": "2026-10-17T12:59:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 595940393,
+            "trainOrderId": 981792458,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-17T15:46:00",
+                    "actualDeparture": "2026-10-17T16:05:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 622548300,
+            "trainOrderId": 232456955,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 59,
+                    "actualSequenceNumber": 60,
+                    "actualArrival": "2026-10-17T11:20:30",
+                    "actualDeparture": "2026-10-17T11:25:30",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 786519804,
+            "trainOrderId": 992321245,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-17T14:36:00",
+                    "actualDeparture": "2026-10-17T14:43:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 985736520,
+            "trainOrderId": 967555600,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 59,
+                    "actualSequenceNumber": 59,
+                    "actualArrival": "2026-10-17T09:24:00",
+                    "actualDeparture": "2026-10-17T09:32:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 333068327,
+            "trainOrderId": 179511741,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 46,
+                    "actualSequenceNumber": 46,
+                    "actualArrival": "2026-10-17T07:26:00",
+                    "actualDeparture": "2026-10-17T07:31:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 859161878,
+            "trainOrderId": 194271636,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 46,
+                    "actualSequenceNumber": 46,
+                    "actualArrival": "2026-10-17T16:39:30",
+                    "actualDeparture": "2026-10-17T16:44:30",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 996879704,
+            "trainOrderId": 957956236,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 1,
+                    "actualSequenceNumber": 1,
+                    "actualDeparture": "2026-10-17T06:20:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 327041522,
+            "trainOrderId": 366268547,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-17T09:23:00",
+                    "actualDeparture": "2026-10-17T09:30:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 739227010,
+            "trainOrderId": 313037287,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-17T13:29:00",
+                    "actualDeparture": "2026-10-17T13:36:00",
+                    "isConfirmed": true
+                }
+            ]
+        },
+        {
+            "scheduleId": 2026,
+            "orderId": 319531090,
+            "trainOrderId": 737955467,
+            "operatingDate": "2026-10-17",
+            "trainStatus": "C",
+            "stations": [
+                {
+                    "stationId": 82404,
+                    "plannedSequenceNumber": 4,
+                    "actualSequenceNumber": 4,
+                    "actualArrival": "2026-10-17T17:46:00",
+                    "actualDeparture": "2026-10-17T17:55:00",
+                    "isConfirmed": true
+                }
+            ]
+        }
+    ],
+    "stations": {
+        "82404": "Muszyna"
+    }
+}

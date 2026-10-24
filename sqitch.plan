@@ -1,0 +1,9 @@
+%syntax-version=1.0.0
+%project=pkp_scraper
+
+init 2026-10-18T18:46:37Z Marcin Kawka <marcin.kawka@aiclearing.com> # initial migration with basic schema setup
+partitions-management 2026-10-19T11:35:46Z Marcin Kawka <marcin.kawka@aiclearing.com> # added partitions management
+disruption-train-fk [init] 2026-10-19T12:11:23Z Marcin Kawka <marcin.kawka@aiclearing.com> # FK disruption.train_id -> train.id with index
+station-carrier-fk [init] 2026-10-19T12:14:17Z Marcin Kawka <marcin.kawka@aiclearing.com> # FKs disruption.station_id -> station.id, train.carrier_code -> carrier.code with indexes
+stop-fk [init] 2026-10-19T12:16:47Z Marcin Kawka <marcin.kawka@aiclearing.com> # FKs stop.train_id -> train.id, stop.station_id -> station.id with indexes
+additional-views 2026-10-19T12:22:04Z Marcin Kawka <marcin.kawka@aiclearing.com> # helping views
