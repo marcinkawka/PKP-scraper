@@ -219,8 +219,11 @@ class DBRepository:
         with self._conn.cursor() as cur:
             cur.executemany(sql, rows)
 
-    def upsert_disruptions(self, disruptions: Iterable[Disruption]) -> None:
-        """Disruptions per affected stop; their type codes must already be in pkp.disruption_type."""
+    def upsert_disruptions(self, disruptions: Iterable[Disruption]) -> set[int]:
+        """Disruptions per affected stop; their type codes must already be in pkp.disruption_type.
+
+        Returns the set of station_ids that were skipped because they are not in pkp.station.
+        """
         rows = [
             {
                 "schedule_id": d.schedule_id,
@@ -234,8 +237,16 @@ class DBRepository:
             for d in disruptions
         ]
         if not rows:
-            return
-        self._ensure_trains(rows)
+            return set()
+        all_station_ids = list({r["station_id"] for r in rows})
+        with self._conn.cursor() as cur:
+            cur.execute("SELECT id FROM pkp.station WHERE id = ANY(%s)", [all_station_ids])
+            known_ids = {row[0] for row in cur.fetchall()}
+        unknown_ids = set(all_station_ids) - known_ids
+        valid_rows = [r for r in rows if r["station_id"] not in unknown_ids] if unknown_ids else rows
+        if not valid_rows:
+            return unknown_ids
+        self._ensure_trains(valid_rows)
         # Every poll that still reports the disruption moves last_seen_at forward.
         sql = """
             INSERT INTO pkp.disruption AS d (operating_date, train_id, seq, station_id, type_code)
@@ -250,7 +261,8 @@ class DBRepository:
                    last_seen_at = now()
         """
         with self._conn.cursor() as cur:
-            cur.executemany(sql, rows)
+            cur.executemany(sql, valid_rows)
+        return unknown_ids
 
     def insert_api_fetch(
         self,
@@ -312,11 +324,14 @@ class DBService:
 
     def store_disruptions(
         self, types: Iterable[DisruptionType], disruptions: Iterable[Disruption]
-    ) -> None:
-        """Dictionary first (FK target), then disruptions, in one transaction."""
+    ) -> set[int]:
+        """Dictionary first (FK target), then disruptions, in one transaction.
+
+        Returns the set of station_ids that were skipped (not in pkp.station).
+        """
         with self._conn.transaction():
             self._repo.upsert_disruption_types(types)
-            self._repo.upsert_disruptions(disruptions)
+            return self._repo.upsert_disruptions(disruptions)
 
     def log_fetch(
         self,

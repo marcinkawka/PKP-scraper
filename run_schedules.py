@@ -1,3 +1,6 @@
+'''Scrape train schedule data from the configured API and store it in the database.
+for last month (or any other period) for all stations or a limited set of stations.'''
+
 from datetime import date, timedelta
 
 from pkp_scraper.config import ApiSettings, DbSettings

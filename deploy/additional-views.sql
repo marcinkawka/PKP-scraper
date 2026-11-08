@@ -21,10 +21,10 @@ SELECT t.carrier_code,
     d.last_seen_at,
     d.operating_date,
     dt.code
-   FROM disruption d
-     JOIN train t ON d.train_id = t.id
-     JOIN disruption_type dt ON d.type_code = dt.code
-	join pkp.station s on d.station_id = s.id; 
+   FROM pkp.disruption d
+     JOIN pkp.train t ON d.train_id = t.id
+     JOIN pkp.disruption_type dt ON d.type_code = dt.code
+     JOIN pkp.station s ON d.station_id = s.id;
 
 
 
@@ -42,9 +42,9 @@ AS SELECT tr.operating_date,
     coalesce(EXTRACT(epoch from (s.actual_dep-s.planned_dep))::integer,0) as dep_delay,
     s.confirmed,
     s.seq_shift
-   FROM train_run tr
-     JOIN train t ON tr.train_id = t.id
-     JOIN stop s ON tr.train_id = s.train_id AND tr.operating_date = s.operating_date
-     JOIN station s2 ON s2.id = s.station_id;
+   FROM pkp.train_run tr
+     JOIN pkp.train t ON tr.train_id = t.id
+     JOIN pkp.stop s ON tr.train_id = s.train_id AND tr.operating_date = s.operating_date
+     JOIN pkp.station s2 ON s2.id = s.station_id;
 
 COMMIT;

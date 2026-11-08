@@ -1,3 +1,6 @@
+
+"""Scrape train carrier data from the configured API and store it in the database."""
+
 from pkp_scraper.carriers import CarriersScraper
 from pkp_scraper.config import ApiSettings, DbSettings
 from pkp_scraper.db import DBService

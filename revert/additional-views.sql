@@ -2,6 +2,7 @@
 
 BEGIN;
 
--- XXX Add DDLs here.
+DROP VIEW IF EXISTS pkp.v_train_disruptions;
+DROP VIEW IF EXISTS pkp.v_train_run;
 
 COMMIT;
