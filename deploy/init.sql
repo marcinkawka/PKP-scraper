@@ -86,10 +86,26 @@ CREATE TABLE pkp.stop (
 -- Opóźnienia liczymy z timestampów (API pomija pola *DelayMinutes gdy opóźnienie = 0
 -- i zaokrągla do minut; z timestampów mamy sekundy).
 CREATE VIEW pkp.v_stop_delay AS
-SELECT s.*,
+SELECT s.operating_date,
+       s.train_id,
+       s.seq,
+       s.station_id,
+       s.seq_shift,
+       s.planned_arr,
+       s.planned_dep,
+       s.actual_arr,
+       s.actual_dep,
+       s.confirmed,
+       t.carrier_code,
+       t.category,
+       t.number      AS train_number,
+       t.name        AS train_name,
+       st.name       AS station_name,
        extract(epoch FROM s.actual_arr - s.planned_arr)::integer AS arr_delay_s,
        extract(epoch FROM s.actual_dep - s.planned_dep)::integer AS dep_delay_s
-FROM pkp.stop s;
+FROM pkp.stop s
+JOIN pkp.train t ON t.id = s.train_id
+JOIN pkp.station st ON st.id = s.station_id;
 
 -- ───────────────────────── zakłócenia (długożyjące, małe) ─────────────────────────
 

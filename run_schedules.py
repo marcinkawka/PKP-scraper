@@ -8,7 +8,8 @@ from pkp_scraper.db import DBService
 from pkp_scraper.schedules import SchedulesScraper
 
 # limited to one station while testing; None = all stations
-STATIONS = [82404,80630,81901,80416]
+# STATIONS = [82404,80630,81901,80416]
+STATIONS = None
 
 start_date = date.today()  - timedelta(days=31)  # date(2024, 1, 1)
 end_date = date.today()  # date(2024, 1, 31)

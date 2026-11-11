@@ -264,6 +264,24 @@ class DBRepository:
             cur.executemany(sql, valid_rows)
         return unknown_ids
 
+    def top_station_ids(self, limit: int, window_days: int) -> list[int]:
+        """Station IDs ranked by number of planned stops in the last `window_days`.
+
+        Reads from pkp.stop, which is partitioned by day and short-retention — so this
+        tracks the current timetable without a manual refresh.
+        """
+        sql = """
+            SELECT station_id
+              FROM pkp.stop
+             WHERE operating_date >= CURRENT_DATE - %s::integer
+             GROUP BY station_id
+             ORDER BY count(*) DESC
+             LIMIT %s
+        """
+        with self._conn.cursor() as cur:
+            cur.execute(sql, (window_days, limit))
+            return [row[0] for row in cur.fetchall()]
+
     def insert_api_fetch(
         self,
         endpoint: str,
@@ -321,6 +339,14 @@ class DBService:
             self._repo.upsert_train_runs(runs)
             self._repo.ensure_stop_partitions(r.operating_date for r in runs if r.stops)
             self._repo.upsert_stops(runs)
+
+    def busiest_stations(self, limit: int = 32, window_days: int = 7) -> list[int]:
+        """Top-N station IDs by planned-stop count in the recent window.
+
+        Read-only; no transaction needed. Defaults chosen to stay within the
+        pkp.stop retention (14 days).
+        """
+        return self._repo.top_station_ids(limit=limit, window_days=window_days)
 
     def store_disruptions(
         self, types: Iterable[DisruptionType], disruptions: Iterable[Disruption]
