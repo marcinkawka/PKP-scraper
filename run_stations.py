@@ -1,5 +1,7 @@
 '''Scrape train station data from the configured API and store it in the database.'''
 
+import logging
+
 from pkp_scraper.config import ApiSettings, DbSettings
 from pkp_scraper.db import DBService
 from pkp_scraper.runner import run_paginated
@@ -8,6 +10,7 @@ from pkp_scraper.stations import StationsScraper
 DELAY_BETWEEN_REQUESTS_S = 5
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     scraper = StationsScraper(ApiSettings.from_env())
     with DBService.connect(DbSettings.from_env()) as db:
         total = run_paginated(scraper, db, db.store_stations, delay_s=DELAY_BETWEEN_REQUESTS_S)

@@ -160,6 +160,39 @@ def test_store_train_runs_stores_stops_in_new_partition(trains_cleanup):
             svc._conn.execute("DROP TABLE IF EXISTS pkp.stop_20300115")
 
 
+def test_store_train_runs_skips_stops_at_unknown_stations(trains_cleanup):
+    from datetime import datetime, timezone
+
+    from pkp_scraper.models import Stop, TrainRun
+
+    svc = trains_cleanup
+    day = date(2030, 1, 16)
+    when = datetime(2030, 1, 16, 10, 0, tzinfo=timezone.utc)
+    known = svc._conn.execute("SELECT id FROM pkp.station ORDER BY id DESC LIMIT 1").fetchone()
+    if known is None:
+        pytest.skip("pkp.station is empty")
+    unknown_id = -999_999  # never a real station
+
+    def stop(seq: int, station_id: int) -> Stop:
+        return Stop(seq=seq, station_id=station_id, seq_shift=0, planned_arr=when, planned_dep=None,
+                    actual_arr=None, actual_dep=None, confirmed=False)
+
+    run = TrainRun(TEST_SCHEDULE_ID, 1, 2, day, "P",
+                   (stop(1, known[0]), stop(2, unknown_id), stop(3, unknown_id)))
+    try:
+        assert svc.store_train_runs([run]) == {unknown_id: 2}  # reported, no FK error
+        rows = svc._conn.execute(
+            """SELECT s.seq, s.station_id
+                 FROM pkp.stop s JOIN pkp.train t ON t.id = s.train_id
+                WHERE s.operating_date = %s AND t.schedule_id = %s""",
+            (day, TEST_SCHEDULE_ID),
+        ).fetchall()
+        assert rows == [(1, known[0])]  # the rest of the run is stored
+    finally:
+        with svc._conn.transaction():
+            svc._conn.execute("DROP TABLE IF EXISTS pkp.stop_20300116")
+
+
 TEST_TYPE_CODE = "test_type"
 
 

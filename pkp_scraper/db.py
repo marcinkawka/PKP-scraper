@@ -149,8 +149,12 @@ class DBRepository:
                     )
                 )
 
-    def upsert_stops(self, runs: Iterable[TrainRun]) -> None:
-        """Stops of the given runs; their trains must already exist in pkp.train."""
+    def upsert_stops(self, runs: Iterable[TrainRun]) -> dict[int, int]:
+        """Stops of the given runs; their trains must already exist in pkp.train.
+
+        Stops at stations missing from pkp.station are skipped (they would break the FK).
+        Returns {unknown station_id: number of skipped stops}.
+        """
         rows = [
             {
                 "schedule_id": r.schedule_id,
@@ -170,7 +174,20 @@ class DBRepository:
             for s in r.stops
         ]
         if not rows:
-            return
+            return {}
+        with self._conn.cursor() as cur:
+            cur.execute(
+                "SELECT id FROM pkp.station WHERE id = ANY(%s)", [list({r["station_id"] for r in rows})]
+            )
+            known_ids = {row[0] for row in cur.fetchall()}
+        skipped: dict[int, int] = {}
+        for r in rows:
+            if r["station_id"] not in known_ids:
+                skipped[r["station_id"]] = skipped.get(r["station_id"], 0) + 1
+        if skipped:
+            rows = [r for r in rows if r["station_id"] in known_ids]
+            if not rows:
+                return skipped
         # Missing timestamps never erase stored ones: e.g. a stations-filtered fetch comes
         # without planned times. Write only when something changed (fewer dead tuples).
         sql = """
@@ -204,6 +221,7 @@ class DBRepository:
         """
         with self._conn.cursor() as cur:
             cur.executemany(sql, rows)
+        return skipped
 
     def upsert_disruption_types(self, types: Iterable[DisruptionType]) -> None:
         sql = """
@@ -332,13 +350,16 @@ class DBService:
         with self._conn.transaction():
             self._repo.upsert_trains(trains)
 
-    def store_train_runs(self, runs: Iterable[TrainRun]) -> None:
-        """Runs and their stops in one transaction; creates missing daily stop partitions."""
+    def store_train_runs(self, runs: Iterable[TrainRun]) -> dict[int, int]:
+        """Runs and their stops in one transaction; creates missing daily stop partitions.
+
+        Returns {station_id: number of stops} skipped because the station is not in pkp.station.
+        """
         runs = list(runs)
         with self._conn.transaction():
             self._repo.upsert_train_runs(runs)
             self._repo.ensure_stop_partitions(r.operating_date for r in runs if r.stops)
-            self._repo.upsert_stops(runs)
+            return self._repo.upsert_stops(runs)
 
     def busiest_stations(self, limit: int = 32, window_days: int = 7) -> list[int]:
         """Top-N station IDs by planned-stop count in the recent window.

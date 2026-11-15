@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from typing import Callable, TypeVar
 
@@ -7,6 +8,8 @@ from .base import PaginatedScraper
 from .db import DBService
 
 T = TypeVar("T")
+
+log = logging.getLogger(__name__)
 
 
 def run_paginated(
@@ -25,11 +28,15 @@ def run_paginated(
     total = 0
     number = 1
     while True:
+        log.info("%s: requesting page %d (pageSize %s, %s)", scraper.endpoint, number, scraper.page_size, params)
+        started = time.monotonic()
         try:
             page = scraper.scrape_page(number)
         except Exception as exc:
+            log.error("%s: page %d failed: %s", scraper.endpoint, number, exc)
             db.log_fetch(scraper.endpoint, ok=False, note=f"page {number} {params}: {exc}"[:1000])
             raise
+        fetched = time.monotonic()
         store(page.items)
         db.log_fetch(
             scraper.endpoint,
@@ -39,7 +46,16 @@ def run_paginated(
             note=f"page {page.number}/{page.total_pages}, pageSize {scraper.page_size} {params}",
         )
         total += len(page.items)
-        print(f"{scraper.endpoint} page {page.number}/{page.total_pages}: {len(page.items)} items")
+        log.info(
+            "%s: page %s/%s done: %d items (fetch %.1fs, store %.1fs), %d items so far",
+            scraper.endpoint,
+            page.number,
+            page.total_pages,
+            len(page.items),
+            fetched - started,
+            time.monotonic() - fetched,
+            total,
+        )
         if not page.has_next:
             return total
         number += 1
