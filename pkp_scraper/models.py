@@ -67,3 +67,15 @@ class Disruption:
     seq: int                        # sequenceNumber == stop.seq
     station_id: int
     type_code: str
+
+
+@dataclass(frozen=True)
+class DelayedTrain:
+    """A train's last confirmed stop that arrived late. Read model, not stored."""
+    carrier_code: str | None
+    category: str | None
+    number: str | None
+    name: str | None
+    station_name: str
+    planned_arr: datetime | None
+    delay_min: int

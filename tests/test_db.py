@@ -160,6 +160,44 @@ def test_store_train_runs_stores_stops_in_new_partition(trains_cleanup):
             svc._conn.execute("DROP TABLE IF EXISTS pkp.stop_20300115")
 
 
+
+def test_most_delayed_trains_last_confirmed_stop_and_carrier_filter(trains_cleanup):
+    from datetime import datetime, timedelta, timezone
+
+    from pkp_scraper.models import DelayedTrain, Stop, Train, TrainRun
+
+    svc = trains_cleanup
+    day = date(2030, 1, 16)
+    tz = timezone(timedelta(hours=1))
+    planned = datetime(2030, 1, 16, 10, 0, tzinfo=tz)
+
+    def stop(seq: int, hours: int, late_min: int, confirmed: bool = True) -> Stop:
+        arr = planned + timedelta(hours=hours)
+        return Stop(seq=seq, station_id=82404, seq_shift=0, planned_arr=arr, planned_dep=None,
+                    actual_arr=arr + timedelta(minutes=late_min), actual_dep=None, confirmed=confirmed)
+
+    try:
+        # no carrier: avoids depending on pkp.carrier content
+        svc.store_trains([
+            Train(TEST_SCHEDULE_ID, 1, 2, None, "TST", "99001", "Late", None),
+            Train(TEST_SCHEDULE_ID, 1, 3, None, "TST", "99002", None, None),
+        ])
+        svc.store_train_runs([
+            # last confirmed stop (+45) wins over the earlier one and over the forecast
+            TrainRun(TEST_SCHEDULE_ID, 1, 2, day, "P",
+                     (stop(1, 0, 20), stop(2, 1, 45), stop(3, 2, 90, confirmed=False))),
+            TrainRun(TEST_SCHEDULE_ID, 1, 3, day, "P", (stop(1, 0, 5),)),  # under the threshold
+        ])
+
+        rows = svc.most_delayed_trains(day, ["PR"], exclude=True)
+        assert rows == [DelayedTrain(None, "TST", "99001", "Late", rows[0].station_name,
+                                     planned + timedelta(hours=1), 45)]
+        assert svc.most_delayed_trains(day, ["PR"]) == []
+    finally:
+        with svc._conn.transaction():
+            svc._conn.execute("DROP TABLE IF EXISTS pkp.stop_20300116")
+
+
 def test_store_train_runs_skips_stops_at_unknown_stations(trains_cleanup):
     from datetime import datetime, timezone
 

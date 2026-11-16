@@ -7,7 +7,7 @@ import psycopg
 from psycopg import sql as pgsql
 
 from .config import DbSettings
-from .models import Carrier, Disruption, DisruptionType, Station, Train, TrainRun
+from .models import Carrier, DelayedTrain, Disruption, DisruptionType, Station, Train, TrainRun
 
 
 class DBRepository:
@@ -300,6 +300,47 @@ class DBRepository:
             cur.execute(sql, (window_days, limit))
             return [row[0] for row in cur.fetchall()]
 
+    def top_delayed_trains(
+        self, day: date, carriers: list[str], exclude: bool, min_delay_min: int, limit: int
+    ) -> list[DelayedTrain]:
+        """Most delayed trains of `day`, by arrival delay at each train's last confirmed stop.
+
+        `carriers` are carrier codes to keep, or to leave out when `exclude` is set
+        (trains without a carrier then count as "not in the list"). Same joins as
+        pkp.v_train_run, which does not expose carrier_code.
+        """
+        sql = """
+            SELECT carrier_code, category, number, name, station_name, planned_arr, delay_min
+              FROM (
+                SELECT DISTINCT ON (t.carrier_code, t.number)
+                       t.carrier_code, t.category, t.number, t.name,
+                       st.name AS station_name,
+                       s.planned_arr,
+                       EXTRACT(epoch FROM (s.actual_arr - s.planned_arr))::integer / 60 AS delay_min
+                  FROM pkp.train_run tr
+                  JOIN pkp.train t ON tr.train_id = t.id
+                  JOIN pkp.stop s ON tr.train_id = s.train_id AND tr.operating_date = s.operating_date
+                  JOIN pkp.station st ON st.id = s.station_id
+                 WHERE tr.operating_date = %(day)s
+                   AND coalesce(t.carrier_code = ANY(%(carriers)s), false) = %(include)s
+                   AND s.actual_arr - s.planned_arr > make_interval(mins => %(min_delay)s)
+                   AND s.confirmed
+                 ORDER BY t.carrier_code, t.number, s.planned_arr DESC NULLS LAST
+              ) last_stop
+             ORDER BY delay_min DESC
+             LIMIT %(limit)s
+        """
+        params = {
+            "day": day,
+            "carriers": carriers,
+            "include": not exclude,
+            "min_delay": min_delay_min,
+            "limit": limit,
+        }
+        with self._conn.cursor() as cur:
+            cur.execute(sql, params)
+            return [DelayedTrain(*row) for row in cur.fetchall()]
+
     def insert_api_fetch(
         self,
         endpoint: str,
@@ -368,6 +409,23 @@ class DBService:
         pkp.stop retention (14 days).
         """
         return self._repo.top_station_ids(limit=limit, window_days=window_days)
+
+    def most_delayed_trains(
+        self,
+        day: date,
+        carriers: Iterable[str],
+        *,
+        exclude: bool = False,
+        min_delay_min: int = 10,
+        limit: int = 20,
+    ) -> list[DelayedTrain]:
+        """Top-N delayed trains of `day` run by `carriers` (or by anyone else, with `exclude`).
+
+        Read-only; no transaction needed.
+        """
+        return self._repo.top_delayed_trains(
+            day=day, carriers=list(carriers), exclude=exclude, min_delay_min=min_delay_min, limit=limit
+        )
 
     def store_disruptions(
         self, types: Iterable[DisruptionType], disruptions: Iterable[Disruption]
