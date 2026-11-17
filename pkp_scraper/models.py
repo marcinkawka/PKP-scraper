@@ -79,3 +79,32 @@ class DelayedTrain:
     station_name: str
     planned_arr: datetime | None
     delay_min: int
+
+
+@dataclass(frozen=True)
+class TrainDisruption:
+    """One disruption reported for a train at one station. Read model, not stored."""
+    carrier_code: str | None
+    category: str | None
+    number: str | None
+    train_name: str | None
+    station_name: str
+    message: str
+    first_seen_at: datetime
+
+
+@dataclass(frozen=True)
+class StationDisruptions:
+    """A station's disruptions of one day, with its traffic. Read model, not stored."""
+    station_name: str
+    trains: int                     # trains stopping there that day (pkp.stop)
+    disrupted_trains: int           # of those, trains with at least one disruption there
+    disruptions: tuple[TrainDisruption, ...]
+
+
+@dataclass(frozen=True)
+class StationTrains:
+    """How many times a disruption was reported at a station, and for which trains. Read model."""
+    station_name: str
+    count: int
+    trains: tuple[str, ...]         # train name, else "category number"; repeats kept

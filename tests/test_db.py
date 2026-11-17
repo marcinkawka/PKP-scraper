@@ -265,3 +265,92 @@ def test_store_disruptions_dictionary_first_and_idempotent(trains_cleanup):
         with svc._conn.transaction():
             svc._conn.execute("DELETE FROM pkp.disruption WHERE type_code = %s", (TEST_TYPE_CODE,))
             svc._conn.execute("DELETE FROM pkp.disruption_type WHERE code = %s", (TEST_TYPE_CODE,))
+
+
+def test_unlucky_train_returns_all_disruptions_of_the_most_disrupted_train(trains_cleanup):
+    from pkp_scraper.models import Disruption, DisruptionType, Train
+
+    svc = trains_cleanup
+    day = date(2030, 1, 17)  # no real disruptions that day
+    try:
+        assert svc.unlucky_train(day) == []
+        svc.store_trains([
+            Train(TEST_SCHEDULE_ID, 1, 2, None, "TST", "99001", "Pechowy", None),
+            Train(TEST_SCHEDULE_ID, 1, 3, None, "TST", "99002", None, None),
+        ])
+        svc.store_disruptions([DisruptionType(TEST_TYPE_CODE, "Awaria")], [
+            Disruption(TEST_SCHEDULE_ID, 1, 2, day, 1, 82404, TEST_TYPE_CODE),
+            Disruption(TEST_SCHEDULE_ID, 1, 2, day, 2, 82404, TEST_TYPE_CODE),
+            Disruption(TEST_SCHEDULE_ID, 1, 3, day, 1, 82404, TEST_TYPE_CODE),
+        ])
+        rows = svc.unlucky_train(day)
+        assert [(r.number, r.train_name, r.message) for r in rows] == [("99001", "Pechowy", "Awaria")] * 2
+    finally:
+        with svc._conn.transaction():
+            svc._conn.execute("DELETE FROM pkp.disruption WHERE type_code = %s", (TEST_TYPE_CODE,))
+            svc._conn.execute("DELETE FROM pkp.disruption_type WHERE code = %s", (TEST_TYPE_CODE,))
+
+
+def test_unlucky_station_ranks_by_share_of_disrupted_trains(trains_cleanup):
+    from datetime import datetime, timezone
+
+    from pkp_scraper.models import Disruption, DisruptionType, Stop, Train, TrainRun
+
+    svc = trains_cleanup
+    day = date(2030, 1, 18)  # no real data that day
+    quiet = svc._conn.execute("SELECT id FROM pkp.station WHERE id <> 82404 ORDER BY id LIMIT 1").fetchone()[0]
+    at = datetime(2030, 1, 18, 10, 0, tzinfo=timezone.utc)
+
+    def stop(seq: int, station_id: int) -> Stop:
+        return Stop(seq=seq, station_id=station_id, seq_shift=0, planned_arr=at, planned_dep=None,
+                    actual_arr=None, actual_dep=None, confirmed=False)
+
+    try:
+        assert svc.unlucky_station(day, min_trains=1) is None
+        svc.store_trains([Train(TEST_SCHEDULE_ID, 1, 2, None, "TST", "99001", None, None),
+                          Train(TEST_SCHEDULE_ID, 1, 3, None, "TST", "99002", None, None)])
+        # 82404: two trains, one disrupted (50%); quiet: one train, disrupted (100%)
+        svc.store_train_runs([TrainRun(TEST_SCHEDULE_ID, 1, 2, day, "P", (stop(1, 82404), stop(2, quiet))),
+                              TrainRun(TEST_SCHEDULE_ID, 1, 3, day, "P", (stop(1, 82404),))])
+        svc.store_disruptions([DisruptionType(TEST_TYPE_CODE, "Awaria")], [
+            Disruption(TEST_SCHEDULE_ID, 1, 2, day, 1, 82404, TEST_TYPE_CODE),
+            Disruption(TEST_SCHEDULE_ID, 1, 2, day, 2, quiet, TEST_TYPE_CODE),
+        ])
+        best = svc.unlucky_station(day, min_trains=1)
+        assert (best.trains, best.disrupted_trains, len(best.disruptions)) == (1, 1, 1)
+        assert best.disruptions[0].number == "99001"
+
+        busy = svc.unlucky_station(day, min_trains=2)   # quiet station has too little traffic
+        assert (busy.trains, busy.disrupted_trains) == (2, 1)
+        assert busy.station_name != best.station_name
+
+        # excluded messages neither pick the station nor show up
+        assert svc.unlucky_station(day, ["Awar%"], min_trains=1) is None
+    finally:
+        with svc._conn.transaction():
+            svc._conn.execute("DELETE FROM pkp.disruption WHERE type_code = %s", (TEST_TYPE_CODE,))
+            svc._conn.execute("DELETE FROM pkp.disruption_type WHERE code = %s", (TEST_TYPE_CODE,))
+            svc._conn.execute("DROP TABLE IF EXISTS pkp.stop_20300118")
+
+
+def test_disruption_by_station_counts_one_message_per_station(trains_cleanup):
+    from pkp_scraper.models import Disruption, DisruptionType, Train
+
+    svc = trains_cleanup
+    day = date(2030, 1, 19)  # no real disruptions that day
+    other = TEST_TYPE_CODE + "_other"
+    try:
+        svc.store_trains([Train(TEST_SCHEDULE_ID, 1, 2, None, "TST", "99001", "Pechowy", None),
+                          Train(TEST_SCHEDULE_ID, 1, 3, None, "TST", "99002", None, None)])
+        svc.store_disruptions(
+            [DisruptionType(TEST_TYPE_CODE, "Interwencja testowa"), DisruptionType(other, "Inna")],
+            [Disruption(TEST_SCHEDULE_ID, 1, 2, day, 1, 82404, TEST_TYPE_CODE),
+             Disruption(TEST_SCHEDULE_ID, 1, 3, day, 1, 82404, TEST_TYPE_CODE),
+             Disruption(TEST_SCHEDULE_ID, 1, 3, day, 2, 82404, other)],
+        )
+        [row] = svc.disruption_by_station(day, "Interwencja testowa")
+        assert (row.count, sorted(row.trains)) == (2, ["Pechowy", "TST 99002"])  # name, else category number
+    finally:
+        with svc._conn.transaction():
+            svc._conn.execute("DELETE FROM pkp.disruption WHERE type_code IN (%s, %s)", (TEST_TYPE_CODE, other))
+            svc._conn.execute("DELETE FROM pkp.disruption_type WHERE code IN (%s, %s)", (TEST_TYPE_CODE, other))

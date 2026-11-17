@@ -7,7 +7,18 @@ import psycopg
 from psycopg import sql as pgsql
 
 from .config import DbSettings
-from .models import Carrier, DelayedTrain, Disruption, DisruptionType, Station, Train, TrainRun
+from .models import (
+    Carrier,
+    DelayedTrain,
+    Disruption,
+    DisruptionType,
+    Station,
+    StationDisruptions,
+    StationTrains,
+    Train,
+    TrainDisruption,
+    TrainRun,
+)
 
 
 class DBRepository:
@@ -341,6 +352,93 @@ class DBRepository:
             cur.execute(sql, params)
             return [DelayedTrain(*row) for row in cur.fetchall()]
 
+    def unlucky_train_disruptions(self, day: date) -> list[TrainDisruption]:
+        """All disruptions of `day`'s most disrupted train (most rows in pkp.v_train_disruptions).
+
+        A train is (carrier_code, number); ties go to the lowest number. Empty when
+        nothing was disrupted that day.
+        """
+        sql = """
+            WITH unlucky AS (
+                SELECT carrier_code, number
+                  FROM pkp.v_train_disruptions
+                 WHERE operating_date = %(day)s
+                 GROUP BY carrier_code, number
+                 ORDER BY count(*) DESC, number, carrier_code
+                 LIMIT 1
+            )
+            SELECT v.carrier_code, v.category, v.number, v.train_name, v.station_name,
+                   v.message, v.first_seen_at
+              FROM pkp.v_train_disruptions v
+              JOIN unlucky u ON u.carrier_code IS NOT DISTINCT FROM v.carrier_code
+                            AND u.number IS NOT DISTINCT FROM v.number
+             WHERE v.operating_date = %(day)s
+             ORDER BY v.first_seen_at, v.station_name, v.message
+        """
+        with self._conn.cursor() as cur:
+            cur.execute(sql, {"day": day})
+            return [TrainDisruption(*row) for row in cur.fetchall()]
+
+    def unlucky_station_disruptions(
+        self, day: date, excluded: list[str], min_trains: int
+    ) -> StationDisruptions | None:
+        """Disruptions of `day` at the station where the largest share of trains was disrupted.
+
+        Share = trains with a disruption there / trains stopping there (pkp.stop), so
+        busy junctions do not win just by traffic; stations with fewer than
+        `min_trains` trains are skipped. Messages matching any LIKE pattern in
+        `excluded` are left out, both when picking the station and from the result.
+        Ties go to more disrupted trains, then station id. None when no station qualifies.
+        """
+        sql = """
+            WITH disrupted AS (
+                SELECT station_id, count(DISTINCT train_id) AS disrupted_trains
+                  FROM pkp.v_train_disruptions
+                 WHERE operating_date = %(day)s
+                   AND NOT message LIKE ANY(%(excluded)s)
+                 GROUP BY station_id
+            ), unlucky AS (
+                SELECT d.station_id, d.disrupted_trains, count(DISTINCT s.train_id) AS trains
+                  FROM disrupted d
+                  JOIN pkp.stop s ON s.station_id = d.station_id AND s.operating_date = %(day)s
+                 GROUP BY d.station_id, d.disrupted_trains
+                HAVING count(DISTINCT s.train_id) >= %(min_trains)s
+                 ORDER BY d.disrupted_trains::numeric / count(DISTINCT s.train_id) DESC,
+                          d.disrupted_trains DESC, d.station_id
+                 LIMIT 1
+            )
+            SELECT u.trains, u.disrupted_trains,
+                   v.carrier_code, v.category, v.number, v.train_name, v.station_name,
+                   v.message, v.first_seen_at
+              FROM pkp.v_train_disruptions v
+              JOIN unlucky u ON u.station_id = v.station_id
+             WHERE v.operating_date = %(day)s
+               AND NOT v.message LIKE ANY(%(excluded)s)
+             ORDER BY v.first_seen_at, v.number, v.message
+        """
+        with self._conn.cursor() as cur:
+            cur.execute(sql, {"day": day, "excluded": excluded, "min_trains": min_trains})
+            rows = cur.fetchall()
+        if not rows:
+            return None
+        disruptions = tuple(TrainDisruption(*row[2:]) for row in rows)
+        return StationDisruptions(disruptions[0].station_name, rows[0][0], rows[0][1], disruptions)
+
+    def disruption_by_station(self, day: date, message: str) -> list[StationTrains]:
+        """Stations where `message` was reported on `day`, by station name, with the trains."""
+        sql = """
+            SELECT station_name, count(*),
+                   array_agg(coalesce(train_name, concat_ws(' ', category, number)) ORDER BY first_seen_at, number)
+              FROM pkp.v_train_disruptions
+             WHERE operating_date = %(day)s
+               AND message = %(message)s
+             GROUP BY station_name
+             ORDER BY station_name
+        """
+        with self._conn.cursor() as cur:
+            cur.execute(sql, {"day": day, "message": message})
+            return [StationTrains(name, n, tuple(trains)) for name, n, trains in cur.fetchall()]
+
     def insert_api_fetch(
         self,
         endpoint: str,
@@ -426,6 +524,31 @@ class DBService:
         return self._repo.top_delayed_trains(
             day=day, carriers=list(carriers), exclude=exclude, min_delay_min=min_delay_min, limit=limit
         )
+
+    def unlucky_train(self, day: date) -> list[TrainDisruption]:
+        """Disruptions of the most disrupted train of `day`, oldest first ([] if none).
+
+        Read-only; no transaction needed.
+        """
+        return self._repo.unlucky_train_disruptions(day)
+
+    def unlucky_station(
+        self, day: date, excluded: Iterable[str] = (), *, min_trains: int = 50
+    ) -> StationDisruptions | None:
+        """The station of `day` with the largest share of disrupted trains (None if none).
+
+        `excluded` are LIKE patterns of messages that do not count, e.g. 'Na odcinku od%';
+        stations with fewer than `min_trains` trains that day are skipped.
+        Read-only; no transaction needed.
+        """
+        return self._repo.unlucky_station_disruptions(day, list(excluded), min_trains)
+
+    def disruption_by_station(self, day: date, message: str) -> list[StationTrains]:
+        """Where the disruption `message` (exact text) was reported on `day`, by station name.
+
+        Read-only; no transaction needed.
+        """
+        return self._repo.disruption_by_station(day, message)
 
     def store_disruptions(
         self, types: Iterable[DisruptionType], disruptions: Iterable[Disruption]

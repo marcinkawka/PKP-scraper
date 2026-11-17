@@ -9,8 +9,7 @@ from pathlib import Path
 
 from pkp_scraper.config import DbSettings
 from pkp_scraper.db import DBService
-from utils.aging import AgingConfig
-from utils.renderer import Renderer
+from utils import cli
 
 # group -> label on the telegram. "others" = every carrier not listed here.
 GROUPS = {
@@ -32,19 +31,13 @@ def main() -> None:
                    help="carrier group; 'others' = carriers outside the named ones, 'all' = one PNG per group")
     p.add_argument("--date", type=date.fromisoformat, default=date.today(), help="operating date (YYYY-MM-DD), default today")
     p.add_argument("--min-delay", type=int, default=10, help="minimum arrival delay in minutes")
-    p.add_argument("--limit", type=int, default=20)
+    p.add_argument("--limit", type=int, default=None, help="trains listed (default 20, 15 with --social)")
     p.add_argument("--out-dir", type=Path, default=OUTPUT_DIR, help="default output/, file telegram_<group>_<date>.png")
-    p.add_argument("--clean", action="store_true", help="plain form, without the typewritten/aged/scanned look")
-    p.add_argument("--intensity", type=float, default=0.6, help="strength of the aged look, 0..1 (default 0.6)")
-    p.add_argument("--disable", nargs="+", default=[], choices=AgingConfig.effects(), metavar="EFFECT",
-                   help="aged-look effects to switch off: " + ", ".join(AgingConfig.effects()))
+    cli.add_look_args(p)
     args = p.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    if not 0 <= args.intensity <= 1:
-        p.error("--intensity must be within 0..1")
-    aging = AgingConfig(args.intensity, **{name: False for name in args.disable}) if not args.clean else None
+    renderer = cli.renderer(p, args)
 
-    renderer = Renderer(aging=aging)
     with DBService.connect(DbSettings.from_env()) as db:
         for group in GROUPS if args.group == "all" else [args.group]:
             others = group == "others"
@@ -53,9 +46,9 @@ def main() -> None:
                 NAMED_CARRIERS if others else [group],
                 exclude=others,
                 min_delay_min=args.min_delay,
-                limit=args.limit,
+                limit=cli.limit(args, 20, social=15),
             )
-            out = args.out_dir / f"telegram_{group}_{args.date:%Y-%m-%d}.png"
+            out = cli.output(args, f"telegram_{group}_{args.date:%Y-%m-%d}")
             renderer.render(
                 rows, args.date, GROUPS[group], args.min_delay, out,
                 carrier=None if others else group, show_carrier=others,

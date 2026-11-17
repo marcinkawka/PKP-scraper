@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import random
+import re
 import subprocess
+import textwrap
 from datetime import date, datetime
 from functools import lru_cache
 from pathlib import Path
@@ -11,7 +14,7 @@ from typing import Callable
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from pkp_scraper.models import DelayedTrain
+from pkp_scraper.models import DelayedTrain, StationDisruptions, StationTrains, TrainDisruption
 
 from .aging import Aging, AgingConfig, Typewriter, seed_for
 from .stations import station_for
@@ -36,9 +39,53 @@ STRIP_PAD = 14
 # Header cells as shares of the form width: NR, STACJA NADANIA, DATA, GODZ., SŁÓW.
 # The station cell is the wide one so that "W-WA PETERSBURSKA" fits at full type size.
 FIELD_SHARES = (0.17, 0.33, 0.22, 0.14, 0.14)
+MESSAGE_WIDTH = 60      # disruption messages run up to ~400 chars: wrapped onto several strips
+# --social: fixed, narrow lines so that the text stays ~11 pt on a phone, and an image
+# no taller than a phone screen, else the full-screen view shrinks it again
+SOCIAL_CHARS = 46
+SOCIAL_MAX_RATIO = 1.8
+NBSP = "\xa0"          # keeps a train name ("OS 94819") on one strip when wrapping
+PLACEHOLDER = re.compile(r"\{\w+\}")   # dictionary messages are partly templates: "pociągu nr {numer}"
 
 
 TypeFn = Callable[..., None]   # type_(xy, text, max_width=None): types text at (x, y)
+
+log = logging.getLogger(__name__)
+
+
+def wrap(text: str, width: int) -> list[str]:
+    """textwrap.wrap that never breaks inside a word joined by NBSP; NBSP becomes a space."""
+    return [part.replace(NBSP, " ") for part in textwrap.wrap(text, width)] or [""]
+
+
+def keep_together(name: str) -> str:
+    return name.replace(" ", NBSP)
+
+
+CLOSING = "POWYŻSZE PODAJE SIĘ DO WIADOMOŚCI SŁUŻBOWEJ = STOP ="
+SHORT_CLOSING = "DO WIADOMOŚCI SŁUŻBOWEJ = STOP ="
+
+
+def fit(lines: list[str], width: int | None) -> list[str]:
+    """Wrap lines longer than `width` characters, continuation indented; None = as they are.
+
+    A closing "=" stays with the word before it; the closing line gets its short form.
+    """
+    if width is None:
+        return lines
+    out = []
+    for line in lines:
+        if line == CLOSING:
+            line = SHORT_CLOSING
+        if len(line) <= width:
+            out.append(line)
+            continue
+        if line.endswith(" ="):
+            line = line[:-2] + NBSP + "="
+        first, *rest = textwrap.wrap(line, width)
+        out.append(first.replace(NBSP, " "))
+        out.extend("    " + part for part in wrap(" ".join(rest), width - 4))
+    return out
 
 
 class FontNotFoundError(RuntimeError):
@@ -86,8 +133,14 @@ class Renderer:
         sender: str = "@OpPociagow",
         source: str = "Źródło danych: API PKP Polskie Linie Kolejowe S.A.",
         aging: AgingConfig | None = None,
+        social: bool = False,
     ) -> None:
-        """`aging` switches on the typewritten/aged/scanned look; None renders the clean form."""
+        """`aging` switches on the typewritten/aged/scanned look; None renders the clean form.
+
+        `social` lays telegrams out for a phone screen: SOCIAL_CHARS-wide lines, a fixed
+        image width, rows rearranged so that no table is wider than that.
+        """
+        self._width = SOCIAL_CHARS if social else None
         self._sender = sender
         self._source = source
         self._aging = aging
@@ -119,19 +172,76 @@ class Renderer:
         `label` names the carrier group on the form; `show_carrier` prefixes each
         train with its carrier code (for groups mixing several carriers).
         """
+        lines = self._body_lines(rows, label, min_delay_min, show_carrier, width=self._width)
+        self._render(lines, len(rows), day, label, "OPÓŹNIEŃ", out, carrier)
+
+    def render_unlucky(
+        self, rows: list[TrainDisruption], day: date, out: Path, limit: int | None = None
+    ) -> None:
+        """Write the telegram about the day's most disrupted train to `out`.
+
+        `rows` are that one train's disruptions, see DBService.unlucky_train;
+        empty rows give a "nothing to report" telegram. Only the first `limit` are listed.
+        """
+        label = self._train_label(rows[0]) if rows else "PECHOWY POCIĄG DNIA"
+        lines = self._unlucky_lines(rows, label, limit, width=self._width)
+        self._render(lines, len(rows), day, label, "UTRUDNIEŃ", out, rows[0].carrier_code if rows else None)
+
+    def render_unlucky_station(
+        self, station: StationDisruptions | None, day: date, out: Path, limit: int = 8
+    ) -> None:
+        """Write the telegram about the day's most unlucky station to `out`.
+
+        `station` comes from DBService.unlucky_station; None gives a "nothing to
+        report" telegram. Disruptions are grouped by message; the `limit` most
+        frequent messages are listed.
+        """
+        label = station.station_name.upper() if station else "PECHOWA STACJA DNIA"
+        lines = self._unlucky_station_lines(station, label, limit, width=self._width)
+        self._render(lines, len(station.disruptions) if station else 0, day, label, "UTRUDNIEŃ", out, None)
+
+    def render_by_station(
+        self, rows: list[StationTrains], day: date, title: str, out: Path, limit: int | None = None
+    ) -> None:
+        """Write a telegram listing the stations (with trains) of one kind of disruption.
+
+        `rows` come from DBService.disruption_by_station; `title` names the disruption
+        on the form, e.g. "INTERWENCJE SŁUŻB PORZĄDKOWYCH". With `limit`, only the
+        stations with most reports are listed.
+        """
+        lines = self._by_station_lines(rows, title, limit, width=self._width)
+        self._render(lines, sum(r.count for r in rows), day, title, "UTRUDNIEŃ", out, None)
+
+    def _render(
+        self,
+        lines: list[str],
+        count: int,
+        day: date,
+        label: str,
+        subject: str,
+        out: Path,
+        carrier: str | None,
+    ) -> None:
+        """Draw the form around body `lines`; `count` goes into the telegram number,
+        `subject` into the "OD:" line ("DOT. <subject>")."""
         rng = random.Random(day.toordinal())  # same day -> same jitter
         now = datetime.now()
-        lines = self._body_lines(rows, label, min_delay_min, show_carrier)
-        text_w = int(max(len(line) for line in lines) * self._char_w)
-        width = max(text_w + 2 * (MARGIN + STRIP_PAD + 20), MIN_WIDTH)
+        lines = fit(lines, self._width)
+        chars = self._width or max(len(line) for line in lines)
+        width = int(chars * self._char_w) + 2 * (MARGIN + STRIP_PAD + 20)
+        if self._width is None:
+            width = max(width, MIN_WIDTH)
         height = HEADER_H + len(lines) * LINE_H + FOOTER_H
+        if self._width and height > SOCIAL_MAX_RATIO * width:
+            log.warning("%s: %d lines make the image %.1f times taller than wide; "
+                        "it will look small on a phone, lower the limit", out.name, len(lines), height / width)
 
         img = Image.new("RGB", (width, height), PAPER)
         d = ImageDraw.Draw(img)
         d.rectangle((24, 24, width - 24, height - 24), outline=FORM_INK, width=4)
         d.rectangle((34, 34, width - 34, height - 34), outline=FORM_INK, width=1)
 
-        number = f"{day:%d%m}/{len(rows):03d}"
+        number = f"{day:%d%m}/{count:03d}"
         # everything random is seeded by the telegram (number + group): same telegram, same result
         seed = seed_for(number, label)
         aging = Aging(self._aging, seed, (width, height)) if self._aging else None
@@ -157,7 +267,7 @@ class Renderer:
             ("GODZ.", f"{now:%H.%M}"),
             ("SŁÓW", str(sum(len(line.split()) for line in lines))),
         ]
-        self._draw_header(d, type_, width, fields, label)
+        self._draw_header(d, type_, width, fields, label, subject)
         self._draw_body(d, type_, lines, rng)
         self._draw_footer(d, type_, width, height)
         if typist:
@@ -176,17 +286,23 @@ class Renderer:
             img = Image.blend(img, noise, 0.06).filter(ImageFilter.GaussianBlur(0.4))
 
         out.parent.mkdir(parents=True, exist_ok=True)
-        img.save(out)
+        if out.suffix.lower() in (".jpg", ".jpeg"):
+            # no chroma subsampling: keeps thin type and the red stamp crisp
+            img.save(out, quality=90, subsampling=0, optimize=True)
+        else:
+            img.save(out)
 
     @staticmethod
     def _body_lines(
-        rows: list[DelayedTrain], label: str, min_delay_min: int, show_carrier: bool
+        rows: list[DelayedTrain], label: str, min_delay_min: int, show_carrier: bool, *, width: int | None = None
     ) -> list[str]:
+        """With `width`, only POCIĄG, STACJA and OPÓŹN.; station names cut to fit."""
         if not rows:
             return [f"{label} = BRAK POCIĄGÓW OPÓŹNIONYCH PONAD {min_delay_min} MIN = STOP ="]
+        category = (lambda c: (c or "").split("/")[0]) if width else (lambda c: c)
         table = [
             (
-                " ".join(filter(None, (r.carrier_code if show_carrier else None, r.category, r.number))),
+                " ".join(filter(None, (r.carrier_code if show_carrier else None, category(r.category), r.number))),
                 (r.name or "").upper(),
                 r.station_name.upper(),
                 r.planned_arr.strftime("%H.%M") if r.planned_arr else "--.--",
@@ -195,8 +311,16 @@ class Renderer:
             for r in rows
         ]
         head = ("POCIĄG", "NAZWA", "STACJA", "PLAN.", "OPÓŹN.")
-        cols = [0, 1, 2, 3, 4] if any(r[1] for r in table) else [0, 2, 3, 4]  # drop empty NAZWA
+        if width:
+            cols = [0, 2, 4]
+        else:
+            cols = [0, 1, 2, 3, 4] if any(r[1] for r in table) else [0, 2, 3, 4]  # drop empty NAZWA
         widths = {c: max(len(head[c]), *(len(r[c]) for r in table)) for c in cols}
+        if width:   # "01. " + columns + " MIN =" within width: shorten STACJA
+            others = len("01. ") + widths[0] + widths[4] + 2 * len("  ") + len(" MIN =")
+            widths[2] = max(len(head[2]), min(widths[2], width - others))
+            table = [(*r[:2], r[2] if len(r[2]) <= widths[2] else r[2][:widths[2] - 1] + ".", *r[3:])
+                     for r in table]
 
         def fmt(cells: tuple) -> str:
             return "  ".join(
@@ -207,11 +331,154 @@ class Renderer:
             f"WYKAZ {len(rows)} NAJBARDZIEJ OPÓŹNIONYCH POCIĄGÓW = {label} =",
             f"LP  {fmt(head)}",
             *(f"{i:02d}. {fmt(r)} MIN =" for i, r in enumerate(table, 1)),
-            "POWYŻSZE PODAJE SIĘ DO WIADOMOŚCI SŁUŻBOWEJ = STOP =",
+            CLOSING,
         ]
 
+    @staticmethod
+    def _train_label(r: TrainDisruption) -> str:
+        """'IC 6148 OLEŃKA'"""
+        return " ".join(filter(None, (r.category, r.number, (r.train_name or "").upper())))
+
+    @staticmethod
+    def _unlucky_lines(
+        rows: list[TrainDisruption], label: str, limit: int | None = None, *, width: int | None = None
+    ) -> list[str]:
+        """With `width`, each message goes under its time and station instead of beside them."""
+        if not rows:
+            return [f"{label} = BRAK UTRUDNIEŃ W RUCHU POCIĄGÓW = STOP ="]
+        shown, rest = rows[:limit], rows[limit:] if limit is not None else []
+        stations = [r.station_name.upper() for r in shown]
+        station_w = max(len("STACJA"), *(len(s) for s in stations))
+        lines = [
+            f"NAJBARDZIEJ PECHOWY POCIĄG DNIA = {label} =",
+            f"ZGŁOSZONO {len(rows)} UTRUDNIEŃ W RUCHU =",
+        ]
+        if width:
+            lines.append("LP  GODZ.  STACJA / UTRUDNIENIE")
+            indent = " " * len("01. ")
+        else:
+            lines.append(f"LP  GODZ.  {'STACJA':<{station_w}}  UTRUDNIENIE")
+            indent = " " * (len("01. ") + len("GODZ.  ") + station_w + 2)
+        for i, (r, station) in enumerate(zip(shown, stations), 1):
+            message = Renderer._message(r.message, r.number)
+            lead = f"{i:02d}. {r.first_seen_at:%H.%M}  {station}"
+            if width:
+                lines.append(lead)
+                lines.extend(indent + part for part in wrap(f"{message} =", width - len(indent)))
+            else:
+                wrapped = wrap(f"{message} =", MESSAGE_WIDTH)
+                lines.append(f"{i:02d}. {r.first_seen_at:%H.%M}  {station:<{station_w}}  {wrapped[0]}")
+                lines.extend(indent + part for part in wrapped[1:])
+        if rest:
+            lines.append(f"ORAZ {len(rest)} INNYCH UTRUDNIEŃ =")
+        lines.append(CLOSING)
+        return lines
+
+    @staticmethod
+    def _message(message: str, number: str | None = None) -> str:
+        """Message for the tape: upper case, single spaces, template fields filled in or elided."""
+        if number:
+            message = message.replace("{numer}", number)
+        return " ".join(PLACEHOLDER.sub("...", message).split()).upper()
+
+    @staticmethod
+    def _short_train(r: TrainDisruption) -> str:
+        """'IC 8314'; of a 'K22/K22 BUS/R' category only the first part."""
+        return " ".join(filter(None, ((r.category or "").split("/")[0], r.number)))
+
+    @staticmethod
+    def _unlucky_station_lines(
+        station: StationDisruptions | None, label: str, limit: int, *, width: int | None = None
+    ) -> list[str]:
+        """Share of disrupted trains, summary (message + count, most frequent first),
+        then the trains behind each message."""
+        if not station:
+            return [f"{label} = BRAK UTRUDNIEŃ W RUCHU POCIĄGÓW = STOP ="]
+        rows = station.disruptions
+        groups: dict[str, list[TrainDisruption]] = {}
+        for r in rows:  # rows are oldest first: equal counts keep that order
+            groups.setdefault(Renderer._message(r.message), []).append(r)
+        ranked = sorted(groups.items(), key=lambda g: -len(g[1]))
+        shown, rest = ranked[:limit], ranked[limit:]
+        count_w = len("ILOŚĆ")
+        indent = " " * len("01. ")
+        wrap_w = min(MESSAGE_WIDTH, width - len(indent)) if width else MESSAGE_WIDTH
+        max_message_w = wrap_w - len(f"  {'ILOŚĆ'} =") if width else MESSAGE_WIDTH
+        message_w = min(max_message_w, max(len("UTRUDNIENIE"), *(len(m) for m, _ in shown)))
+
+        lines = [
+            f"NAJBARDZIEJ PECHOWA STACJA DNIA = {label} =",
+            f"UTRUDNIENIA DOTKNĘŁY {station.disrupted_trains} Z {station.trains} POCIĄGÓW"
+            f" ({100 * station.disrupted_trains / station.trains:.0f}%) =",
+            f"ZGŁOSZONO {len(rows)} UTRUDNIEŃ =",
+            f"LP  {'UTRUDNIENIE':<{message_w}}  {'ILOŚĆ':>{count_w}}",
+        ]
+        for i, (message, group) in enumerate(shown, 1):
+            wrapped = wrap(message, message_w)
+            lines.extend(indent + part for part in wrapped[:-1])
+            lead = f"{i:02d}. " if len(wrapped) == 1 else indent
+            lines.append(f"{lead}{wrapped[-1]:<{message_w}}  {len(group):>{count_w}} =")
+            if len(wrapped) > 1:   # number the first line of a wrapped message
+                lines[-len(wrapped)] = f"{i:02d}. " + lines[-len(wrapped)][len(indent):]
+        if rest:
+            lines.append(f"ORAZ {sum(len(g) for _, g in rest)} INNYCH UTRUDNIEŃ ({len(rest)} RODZAJÓW) =")
+
+        lines.append("WYKAZ POCIĄGÓW =")
+        for i, (_, group) in enumerate(shown, 1):
+            # no-break space inside a name: "OS 94819" never splits over two strips
+            names = sorted({keep_together(Renderer._short_train(r).upper()) for r in group},
+                           key=lambda n: (len(n), n))
+            wrapped = wrap(f"{', '.join(names)} =", wrap_w)
+            lines.append(f"{i:02d}. {wrapped[0]}")
+            lines.extend(indent + part for part in wrapped[1:])
+        lines.append(CLOSING)
+        return lines
+
+    @staticmethod
+    def _by_station_lines(
+        rows: list[StationTrains], title: str, limit: int | None = None, *, width: int | None = None
+    ) -> list[str]:
+        """Stations in the given order; with `limit`, only the `limit` with most reports.
+        With `width`, the trains go under their station instead of beside it."""
+        if not rows:
+            return [f"{title} = BRAK ZGŁOSZEŃ = STOP ="]
+        total = sum(r.count for r in rows)
+        shown, rest = rows, []
+        if limit is not None and len(rows) > limit:
+            ranked = sorted(rows, key=lambda r: -r.count)   # stable: equal counts keep the order
+            shown, rest = ranked[:limit], ranked[limit:]
+        station_w = max(len("STACJA"), *(len(r.station_name) for r in shown))
+        count_w = len("ILOŚĆ")
+        head = f"LP  {'STACJA':<{station_w}}  {'ILOŚĆ':>{count_w}}"
+        if width:
+            indent = " " * len("01. ")
+            lines = [f"{title} = ZGŁOSZONO {total} RAZY NA {len(rows)} STACJACH =", head + " / POCIĄGI"]
+        else:
+            indent = " " * len(head + "  ")
+            lines = [f"{title} = ZGŁOSZONO {total} RAZY NA {len(rows)} STACJACH =", head + "  POCIĄGI"]
+        for i, r in enumerate(shown, 1):
+            names = ", ".join(keep_together(t.upper()) for t in r.trains)
+            lead = f"{i:02d}. {r.station_name.upper():<{station_w}}  {r.count:>{count_w}}"
+            if width:
+                lines.append(lead)
+                lines.extend(indent + part for part in wrap(f"{names} =", width - len(indent)))
+            else:
+                wrapped = wrap(f"{names} =", MESSAGE_WIDTH)
+                lines.append(f"{lead}  {wrapped[0]}")
+                lines.extend(indent + part for part in wrapped[1:])
+        if rest:
+            lines.append(f"ORAZ {sum(r.count for r in rest)} ZGŁOSZEŃ NA {len(rest)} INNYCH STACJACH =")
+        lines.append(CLOSING)
+        return lines
+
     def _draw_header(
-        self, d: ImageDraw.ImageDraw, type_: TypeFn, width: int, fields: list[tuple[str, str]], label: str
+        self,
+        d: ImageDraw.ImageDraw,
+        type_: TypeFn,
+        width: int,
+        fields: list[tuple[str, str]],
+        label: str,
+        subject: str,
     ) -> None:
         d.text((width - MARGIN, 56), "Druk R-48", font=self._small, fill=FORM_INK, anchor="ra")
         d.text((width / 2, 130), "TELEGRAM SŁUŻBOWY", font=self._title, fill=FORM_INK, anchor="mm")
@@ -229,9 +496,10 @@ class Renderer:
             type_((x + 10, top + 28), value, max_width=cell_w - 20)     # never wraps, never overflows
             x += cell_w
         d.text((MARGIN, 268), "DO:", font=self._label, fill=FORM_INK)
-        type_((MARGIN + 40, 262), "WSZYSTKIE STACJE I DYŻURNI RUCHU")
+        line_w = width - 2 * MARGIN - 40
+        type_((MARGIN + 40, 262), "WSZYSTKIE STACJE I DYŻURNI RUCHU", max_width=line_w)
         d.text((MARGIN, 300), "OD:", font=self._label, fill=FORM_INK)
-        type_((MARGIN + 40, 294), f"TELEGRAF NIEOFICJALNY = DOT. OPÓŹNIEŃ = {label}")
+        type_((MARGIN + 40, 294), f"TELEGRAF NIEOFICJALNY = DOT. {subject} = {label}", max_width=line_w)
 
     def _draw_body(self, d: ImageDraw.ImageDraw, type_: TypeFn, lines: list[str], rng: random.Random) -> None:
         """Teleprinter tape strips glued onto the form, one per line."""
